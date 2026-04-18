@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Events\MessageSent;
 use App\Models\Conversation;
 use App\Models\Message;
 use Illuminate\Http\JsonResponse;
@@ -77,6 +78,8 @@ class MessageController extends Controller
         ]);
 
         $conversation->touch();
+
+        event(new MessageSent($message));
 
         return response()->json(
             $message->load('user:id,username,name,surname,avatar_url')
