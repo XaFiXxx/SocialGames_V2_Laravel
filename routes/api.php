@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ConversationController;
+use App\Http\Controllers\MessageController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -34,4 +36,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/read-all', [NotificationController::class, 'readAllNotifications']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'readNotification']);
     Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
+    // Conversations
+    Route::get('/conversations', [ConversationController::class, 'index']);
+    Route::post('/conversations/direct', [ConversationController::class, 'createDirect']);
+    Route::post('/conversations/group', [ConversationController::class, 'createGroup']);
+
+    // Messages
+    Route::get('/conversations/{id}/messages', [MessageController::class, 'getMessages']);
+    Route::post('/conversations/{id}/messages', [MessageController::class, 'sendMessage']);
 });

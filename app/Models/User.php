@@ -41,7 +41,7 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'password' => 'hashed',
             'terms_accepted_at' => 'datetime',
-            'newsletter' => 'boolean',  
+            'newsletter' => 'boolean',
         ];
     }
 
@@ -121,5 +121,21 @@ class User extends Authenticatable
     public function receivedFriendRequests()
     {
         return $this->hasMany(Friend::class, 'receiver_id');
+    }
+
+    // 🔹 CONVERSATIONS
+
+    public function conversations()
+    {
+        return $this->belongsToMany(Conversation::class, 'conversation_user')
+            ->withPivot(['role', 'last_read_at', 'joined_at'])
+            ->withTimestamps();
+    }
+
+    // 🔹 MESSAGES
+
+    public function messages()
+    {
+        return $this->hasMany(Message::class);
     }
 }
