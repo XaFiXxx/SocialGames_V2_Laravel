@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Events\MessageSent;
+use App\Events\MessageNotificationSent;
 use App\Models\Conversation;
 use App\Models\Message;
+use App\Models\Notification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -80,6 +82,26 @@ class MessageController extends Controller
         $conversation->touch();
 
         event(new MessageSent($message));
+
+        $recipientIds = $conversation->users()
+            ->where('users.id', '!=', $user->id)
+            ->distinct()
+            ->pluck('users.id');
+
+        foreach ($recipientIds as $recipientId) {
+            $notification = Notification::create([
+                'user_id' => $recipientId,
+                'type' => 'message',
+                'data' => [
+                    'user_id' => $user->id,
+                    'username' => $user->username,
+                    'conversation_id' => $conversation->id,
+                    'message' => $message->content,
+                ],
+            ]);
+
+            broadcast(new MessageNotificationSent($notification));
+        }
 
         return response()->json(
             $message->load('user:id,username,name,surname,avatar_url')
