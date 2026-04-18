@@ -13,3 +13,7 @@ Broadcast::channel('chat.{conversationId}', function ($user, $conversationId) {
         ->where('user_id', $user->id)
         ->exists();
 });
+
+Broadcast::channel('notifications.{userId}', function ($user, $userId) {
+    return (int) $user->id === (int) $userId;
+});

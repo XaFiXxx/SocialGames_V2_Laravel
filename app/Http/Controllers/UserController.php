@@ -11,12 +11,69 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use App\Models\User;
 use App\Models\Notification;
+use App\Events\NotificationSent; // ✅ AJOUT
 
 class UserController extends Controller
 {
     public function user(Request $request): JsonResponse
     {
         return response()->json($request->user());
+    }
+
+    public function show(Request $request, int $id): JsonResponse
+    {
+        $profile = User::findOrFail($id);
+        $authUser = $request->user();
+
+        $isOwnProfile = (int) $authUser->id === (int) $profile->id;
+
+        // FOLLOW
+        $isFollowing = DB::table('follows')
+            ->where('follower_id', $authUser->id)
+            ->where('following_id', $profile->id)
+            ->exists();
+
+        // FRIENDSHIP
+        $friendship = DB::table('friends')
+            ->where(function ($query) use ($authUser, $profile) {
+                $query->where('sender_id', $authUser->id)
+                    ->where('receiver_id', $profile->id);
+            })
+            ->orWhere(function ($query) use ($authUser, $profile) {
+                $query->where('sender_id', $profile->id)
+                    ->where('receiver_id', $authUser->id);
+            })
+            ->first();
+
+        $friendStatus = $friendship?->status;
+        $friendRequestSentByMe = $friendship
+            ? (int) $friendship->sender_id === (int) $authUser->id
+            : false;
+
+        // COUNTS
+        $friendsCount = DB::table('friends')
+            ->where(function ($query) use ($profile) {
+                $query->where('sender_id', $profile->id)
+                    ->orWhere('receiver_id', $profile->id);
+            })
+            ->where('status', 'accepted')
+            ->count();
+
+        $followersCount = DB::table('follows')
+            ->where('following_id', $profile->id)
+            ->count();
+
+        return response()->json([
+            'user' => $profile,
+            'meta' => [
+                'is_own_profile' => $isOwnProfile,
+                'is_following' => $isFollowing,
+                'friend_status' => $friendStatus,
+                'friend_request_sent_by_me' => $friendRequestSentByMe,
+                'friends_count' => $friendsCount,
+                'followers_count' => $followersCount,
+            ],
+        ]);
     }
 
     // ---------------- Routes profile personnel ----------------
@@ -123,61 +180,6 @@ class UserController extends Controller
         ]);
     }
 
-    // ---------------- Routes profiles publiques ----------------
-
-    public function show(Request $request, int $id): JsonResponse
-    {
-        $profile = User::findOrFail($id);
-        $authUser = $request->user();
-
-        $isOwnProfile = (int) $authUser->id === (int) $profile->id;
-
-        $isFollowing = DB::table('follows')
-            ->where('follower_id', $authUser->id)
-            ->where('following_id', $profile->id)
-            ->exists();
-
-        $friendship = DB::table('friends')
-            ->where(function ($query) use ($authUser, $profile) {
-                $query->where('sender_id', $authUser->id)
-                    ->where('receiver_id', $profile->id);
-            })
-            ->orWhere(function ($query) use ($authUser, $profile) {
-                $query->where('sender_id', $profile->id)
-                    ->where('receiver_id', $authUser->id);
-            })
-            ->first();
-
-        $friendStatus = $friendship?->status;
-        $friendRequestSentByMe = $friendship
-            ? (int) $friendship->sender_id === (int) $authUser->id
-            : false;
-
-        $friendsCount = DB::table('friends')
-            ->where(function ($query) use ($profile) {
-                $query->where('sender_id', $profile->id)
-                    ->orWhere('receiver_id', $profile->id);
-            })
-            ->where('status', 'accepted')
-            ->count();
-
-        $followersCount = DB::table('follows')
-            ->where('following_id', $profile->id)
-            ->count();
-
-        return response()->json([
-            'user' => $profile,
-            'meta' => [
-                'is_own_profile' => $isOwnProfile,
-                'is_following' => $isFollowing,
-                'friend_status' => $friendStatus, // null | pending | accepted | declined
-                'friend_request_sent_by_me' => $friendRequestSentByMe,
-                'friends_count' => $friendsCount,
-                'followers_count' => $followersCount,
-            ],
-        ]);
-    }
-
     // ---------------- Follow ----------------
 
     public function followUser(Request $request, int $id): JsonResponse
@@ -205,7 +207,7 @@ class UserController extends Controller
                 'updated_at' => now(),
             ]);
 
-            Notification::create([
+            $notification = Notification::create([
                 'user_id' => $target->id,
                 'type' => 'follow',
                 'data' => [
@@ -213,6 +215,8 @@ class UserController extends Controller
                     'username' => $authUser->username,
                 ],
             ]);
+
+            broadcast(new NotificationSent($notification)); // ✅ TEMPS RÉEL
         }
 
         return response()->json([
@@ -240,6 +244,7 @@ class UserController extends Controller
     {
         $authUser = $request->user();
 
+        // ❌ soi-même
         if ((int) $authUser->id === (int) $id) {
             return response()->json([
                 'message' => 'Tu ne peux pas t’ajouter toi-même.',
@@ -248,6 +253,7 @@ class UserController extends Controller
 
         $target = User::findOrFail($id);
 
+        // 🔍 Vérifier relation existante
         $existing = DB::table('friends')
             ->where(function ($query) use ($authUser, $target) {
                 $query->where('sender_id', $authUser->id)
@@ -265,6 +271,7 @@ class UserController extends Controller
             ], 422);
         }
 
+        // ✅ Création demande
         DB::table('friends')->insert([
             'sender_id' => $authUser->id,
             'receiver_id' => $target->id,
@@ -273,7 +280,8 @@ class UserController extends Controller
             'updated_at' => now(),
         ]);
 
-        Notification::create([
+        // 🔔 Notification
+        $notification = Notification::create([
             'user_id' => $target->id,
             'type' => 'friend_request',
             'data' => [
@@ -282,8 +290,26 @@ class UserController extends Controller
             ],
         ]);
 
+        // ⚡ Temps réel
+        broadcast(new NotificationSent($notification));
+
         return response()->json([
             'message' => 'Demande d’ami envoyée.',
+        ]);
+    }
+
+    public function cancelFriendRequest(Request $request, int $id): JsonResponse
+    {
+        $authUser = $request->user();
+
+        DB::table('friends')
+            ->where('sender_id', $authUser->id)
+            ->where('receiver_id', $id)
+            ->where('status', 'pending')
+            ->delete();
+
+        return response()->json([
+            'message' => 'Demande d’ami annulée.',
         ]);
     }
 
@@ -291,24 +317,17 @@ class UserController extends Controller
     {
         $authUser = $request->user();
 
-        $updated = DB::table('friends')
+        DB::table('friends')
             ->where('sender_id', $id)
             ->where('receiver_id', $authUser->id)
-            ->where('status', 'pending')
             ->update([
                 'status' => 'accepted',
                 'updated_at' => now(),
             ]);
 
-        if (!$updated) {
-            return response()->json([
-                'message' => 'Aucune demande trouvée.',
-            ], 404);
-        }
-
         $sender = User::findOrFail($id);
 
-        Notification::create([
+        $notification = Notification::create([
             'user_id' => $sender->id,
             'type' => 'friend_accepted',
             'data' => [
@@ -317,8 +336,25 @@ class UserController extends Controller
             ],
         ]);
 
+        broadcast(new NotificationSent($notification)); // ✅ TEMPS RÉEL
+
         return response()->json([
             'message' => 'Demande d’ami acceptée.',
+        ]);
+    }
+
+    public function declineFriendRequest(Request $request, int $id): JsonResponse
+    {
+        $authUser = $request->user();
+
+        DB::table('friends')
+            ->where('sender_id', $id)
+            ->where('receiver_id', $authUser->id)
+            ->where('status', 'pending')
+            ->delete();
+
+        return response()->json([
+            'message' => 'Demande refusée.',
         ]);
     }
 
@@ -335,11 +371,11 @@ class UserController extends Controller
                 $query->where('sender_id', $id)
                     ->where('receiver_id', $authUser->id);
             })
+            ->where('status', 'accepted')
             ->delete();
 
         return response()->json([
-            'message' => 'Relation supprimée.',
+            'message' => 'Ami supprimé.',
         ]);
     }
-
 }
