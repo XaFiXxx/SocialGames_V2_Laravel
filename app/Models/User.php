@@ -23,6 +23,9 @@ class User extends Authenticatable
         'biography',
         'location',
         'is_admin',
+        'terms_accepted_at',
+        'terms_version',
+        'newsletter',
     ];
 
     protected $hidden = [
@@ -37,6 +40,8 @@ class User extends Authenticatable
             'birthday' => 'date',
             'is_admin' => 'boolean',
             'password' => 'hashed',
+            'terms_accepted_at' => 'datetime',
+            'newsletter' => 'boolean',  
         ];
     }
 
