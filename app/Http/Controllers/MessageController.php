@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Events\MessageSent;
 use App\Events\MessageNotificationSent;
+use App\Events\MessagesSeen;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Notification;
@@ -129,5 +130,42 @@ class MessageController extends Controller
             ->values();
 
         return response()->json($messages);
+    }
+
+    public function markConversationAsRead(Request $request, int $conversationId): JsonResponse
+    {
+        $user = $request->user();
+
+        $conversation = Conversation::findOrFail($conversationId);
+
+        if (!$conversation->users()->where('user_id', $user->id)->exists()) {
+            return response()->json([
+                'message' => 'Non autorisé.',
+            ], 403);
+        }
+
+        $seenAt = now();
+
+        $messageIds = Message::where('conversation_id', $conversation->id)
+            ->where('user_id', '!=', $user->id)
+            ->whereNull('seen_at')
+            ->pluck('id')
+            ->toArray();
+
+        if (!empty($messageIds)) {
+            Message::whereIn('id', $messageIds)->update([
+                'seen_at' => $seenAt,
+            ]);
+
+            broadcast(new MessagesSeen(
+                $conversation->id,
+                $messageIds,
+                $seenAt->toDateTimeString()
+            ));
+        }
+
+        return response()->json([
+            'message' => 'Conversation marquée comme lue.',
+        ]);
     }
 }

@@ -45,4 +45,5 @@ Route::middleware('auth:sanctum')->group(function () {
     // Messages
     Route::get('/conversations/{id}/messages', [MessageController::class, 'getMessages']);
     Route::post('/conversations/{id}/messages', [MessageController::class, 'sendMessage']);
+    Route::post('/conversations/{conversationId}/read', [MessageController::class, 'markConversationAsRead']);
 });
