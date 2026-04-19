@@ -248,9 +248,41 @@ class UserController extends Controller
             )
             ->get();
 
-        $games = collect();
-        $platforms = collect();
-        $posts = collect();
+        $games = $profile->games()
+            ->select(
+                'games.id',
+                'games.name',
+                'games.cover_img',
+                'games.release_at',
+                'games.developer',
+                'games.publisher'
+            )
+            ->latest('games.created_at')
+            ->get();
+
+        $platforms = $profile->platforms()
+            ->select(
+                'platforms.id',
+                'platforms.name',
+                'platforms.slug',
+                'platforms.logo'
+            )
+            ->latest('platforms.created_at')
+            ->get();
+
+        $postsCount = $profile->posts()->count();
+
+        $posts = $profile->posts()
+            ->with(['media:id,post_id,type,url,position'])
+            ->latest()
+            ->take(10)
+            ->get([
+                'id',
+                'content',
+                'created_at',
+                'updated_at',
+                'user_id',
+            ]);
 
         return response()->json([
             'user' => $profile,
@@ -264,7 +296,7 @@ class UserController extends Controller
                 'following_count' => $followingCount,
                 'games_count' => $games->count(),
                 'platforms_count' => $platforms->count(),
-                'posts_count' => $posts->count(),
+                'posts_count' => $postsCount,
             ],
             'friends' => $friends,
             'followers' => $followers,
