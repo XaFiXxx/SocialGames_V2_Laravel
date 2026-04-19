@@ -20,6 +20,104 @@ class UserController extends Controller
         return response()->json($request->user());
     }
 
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $followersCount = DB::table('follows')
+            ->where('following_id', $user->id)
+            ->count();
+
+        $followingCount = DB::table('follows')
+            ->where('follower_id', $user->id)
+            ->count();
+
+        $friendRelations = DB::table('friends')
+            ->where(function ($query) use ($user) {
+                $query->where('sender_id', $user->id)
+                    ->orWhere('receiver_id', $user->id);
+            })
+            ->where('status', 'accepted')
+            ->get();
+
+        $friendsCount = $friendRelations->count();
+
+        $friendIds = $friendRelations
+            ->map(function ($friend) use ($user) {
+                return (int) $friend->sender_id === (int) $user->id
+                    ? $friend->receiver_id
+                    : $friend->sender_id;
+            })
+            ->unique()
+            ->values();
+
+        $friends = $friendIds->isNotEmpty()
+            ? User::query()
+                ->whereIn('id', $friendIds)
+                ->select(
+                    'id',
+                    'username',
+                    'name',
+                    'surname',
+                    'avatar_url',
+                    'biography',
+                    'location'
+                )
+                ->get()
+            : collect();
+
+        $followers = DB::table('follows')
+            ->join('users', 'follows.follower_id', '=', 'users.id')
+            ->where('follows.following_id', $user->id)
+            ->select(
+                'users.id',
+                'users.username',
+                'users.name',
+                'users.surname',
+                'users.avatar_url',
+                'users.biography',
+                'users.location'
+            )
+            ->get();
+
+        $following = DB::table('follows')
+            ->join('users', 'follows.following_id', '=', 'users.id')
+            ->where('follows.follower_id', $user->id)
+            ->select(
+                'users.id',
+                'users.username',
+                'users.name',
+                'users.surname',
+                'users.avatar_url',
+                'users.biography',
+                'users.location'
+            )
+            ->get();
+
+        $games = collect();
+        $platforms = collect();
+        $posts = collect();
+
+        return response()->json([
+            'user' => $user,
+            'meta' => [
+                'is_own_profile' => true,
+                'friends_count' => $friendsCount,
+                'followers_count' => $followersCount,
+                'following_count' => $followingCount,
+                'games_count' => $games->count(),
+                'platforms_count' => $platforms->count(),
+                'posts_count' => $posts->count(),
+            ],
+            'friends' => $friends,
+            'followers' => $followers,
+            'following' => $following,
+            'games' => $games,
+            'platforms' => $platforms,
+            'posts' => $posts,
+        ]);
+    }
+
     public function show(Request $request, int $id): JsonResponse
     {
         $profile = User::findOrFail($id);
@@ -27,13 +125,11 @@ class UserController extends Controller
 
         $isOwnProfile = (int) $authUser->id === (int) $profile->id;
 
-        // FOLLOW
         $isFollowing = DB::table('follows')
             ->where('follower_id', $authUser->id)
             ->where('following_id', $profile->id)
             ->exists();
 
-        // FRIENDSHIP
         $friendship = DB::table('friends')
             ->where(function ($query) use ($authUser, $profile) {
                 $query->where('sender_id', $authUser->id)
@@ -50,18 +146,79 @@ class UserController extends Controller
             ? (int) $friendship->sender_id === (int) $authUser->id
             : false;
 
-        // COUNTS
-        $friendsCount = DB::table('friends')
+        $followersCount = DB::table('follows')
+            ->where('following_id', $profile->id)
+            ->count();
+
+        $followingCount = DB::table('follows')
+            ->where('follower_id', $profile->id)
+            ->count();
+
+        $friendRelations = DB::table('friends')
             ->where(function ($query) use ($profile) {
                 $query->where('sender_id', $profile->id)
                     ->orWhere('receiver_id', $profile->id);
             })
             ->where('status', 'accepted')
-            ->count();
+            ->get();
 
-        $followersCount = DB::table('follows')
-            ->where('following_id', $profile->id)
-            ->count();
+        $friendsCount = $friendRelations->count();
+
+        $friendIds = $friendRelations
+            ->map(function ($friend) use ($profile) {
+                return (int) $friend->sender_id === (int) $profile->id
+                    ? $friend->receiver_id
+                    : $friend->sender_id;
+            })
+            ->unique()
+            ->values();
+
+        $friends = $friendIds->isNotEmpty()
+            ? User::query()
+                ->whereIn('id', $friendIds)
+                ->select(
+                    'id',
+                    'username',
+                    'name',
+                    'surname',
+                    'avatar_url',
+                    'biography',
+                    'location'
+                )
+                ->get()
+            : collect();
+
+        $followers = DB::table('follows')
+            ->join('users', 'follows.follower_id', '=', 'users.id')
+            ->where('follows.following_id', $profile->id)
+            ->select(
+                'users.id',
+                'users.username',
+                'users.name',
+                'users.surname',
+                'users.avatar_url',
+                'users.biography',
+                'users.location'
+            )
+            ->get();
+
+        $following = DB::table('follows')
+            ->join('users', 'follows.following_id', '=', 'users.id')
+            ->where('follows.follower_id', $profile->id)
+            ->select(
+                'users.id',
+                'users.username',
+                'users.name',
+                'users.surname',
+                'users.avatar_url',
+                'users.biography',
+                'users.location'
+            )
+            ->get();
+
+        $games = collect();
+        $platforms = collect();
+        $posts = collect();
 
         return response()->json([
             'user' => $profile,
@@ -72,7 +229,17 @@ class UserController extends Controller
                 'friend_request_sent_by_me' => $friendRequestSentByMe,
                 'friends_count' => $friendsCount,
                 'followers_count' => $followersCount,
+                'following_count' => $followingCount,
+                'games_count' => $games->count(),
+                'platforms_count' => $platforms->count(),
+                'posts_count' => $posts->count(),
             ],
+            'friends' => $friends,
+            'followers' => $followers,
+            'following' => $following,
+            'games' => $games,
+            'platforms' => $platforms,
+            'posts' => $posts,
         ]);
     }
 

@@ -14,9 +14,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // USER
     Route::get('/user', [UserController::class, 'user']);
-    Route::put('/user/profile', [UserController::class, 'updateProfile']);
-    Route::post('/user/avatar', [UserController::class, 'updateAvatar']);
-    Route::post('/user/cover', [UserController::class, 'updateCover']);
+    Route::get('/profile', [UserController::class, 'me']);
+    Route::put('/profile/update', [UserController::class, 'updateProfile']);
+    Route::post('/profile/avatar', [UserController::class, 'updateAvatar']);
+    Route::post('/profile/cover', [UserController::class, 'updateCover']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
     // PUBLIC PROFILE
