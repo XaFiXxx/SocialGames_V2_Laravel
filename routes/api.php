@@ -6,6 +6,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\SearchController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -19,6 +20,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/avatar', [UserController::class, 'updateAvatar']);
     Route::post('/profile/cover', [UserController::class, 'updateCover']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Barre de recherche 
+    Route::get('/search/users', [SearchController::class, 'searchUsers']);
 
     // PUBLIC PROFILE
     Route::get('/user/{id}', [UserController::class, 'show']);
