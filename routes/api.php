@@ -7,6 +7,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\PostController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
@@ -51,4 +52,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/conversations/{id}/messages', [MessageController::class, 'getMessages']);
     Route::post('/conversations/{id}/messages', [MessageController::class, 'sendMessage']);
     Route::post('/conversations/{conversationId}/read', [MessageController::class, 'markConversationAsRead']);
+
+    // Publications 
+    Route::get('/posts', [PostController::class, 'index']);
+    Route::post('/posts', [PostController::class, 'store']);
 });

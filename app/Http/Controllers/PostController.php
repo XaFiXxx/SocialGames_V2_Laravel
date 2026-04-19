@@ -7,43 +7,51 @@ use Illuminate\Http\Request;
 
 class PostController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
+    
+    public function index(Request $request)
     {
-        //
+        $user = $request->user();
+
+        $posts = Post::with(['user', 'media'])
+            ->where('is_active', true)
+            ->where('visibility', 'public') // simple pour commencer
+            ->latest()
+            ->paginate(10);
+
+        return response()->json($posts);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+
     public function store(Request $request)
     {
-        //
+        $user = $request->user();
+
+        $validated = $request->validate([
+            'content' => 'nullable|string|max:2000',
+            'visibility' => 'required|in:public,friends,private',
+            'group_id' => 'nullable|exists:groups,id',
+            'team_id' => 'nullable|exists:teams,id',
+        ]);
+
+        if (empty($validated['content'])) {
+            return response()->json([
+                'message' => 'Le contenu ne peut pas être vide.'
+            ], 422);
+        }
+
+        $post = Post::create([
+            'user_id' => $user->id,
+            'content' => $validated['content'],
+            'visibility' => $validated['visibility'],
+            'group_id' => $validated['group_id'] ?? null,
+            'team_id' => $validated['team_id'] ?? null,
+        ]);
+
+        return response()->json([
+            'message' => 'Post créé avec succès',
+            'post' => $post->load('user')
+        ], 201);
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Post $post)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Post $post)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Post $post)
-    {
-        //
-    }
+    
 }
