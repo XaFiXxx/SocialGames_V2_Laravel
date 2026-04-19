@@ -11,6 +11,8 @@ class Platform extends Model
 
     protected $fillable = [
         'name',
+        'slug',
+        'logo',
     ];
 
     public function games()
