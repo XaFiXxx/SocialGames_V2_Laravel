@@ -20,7 +20,7 @@ class UserController extends Controller
         return response()->json($request->user());
     }
 
-    public function me(Request $request): JsonResponse
+   public function me(Request $request): JsonResponse
     {
         $user = $request->user();
 
@@ -94,9 +94,41 @@ class UserController extends Controller
             )
             ->get();
 
-        $games = collect();
-        $platforms = collect();
-        $posts = collect();
+        $games = $user->games()
+            ->select(
+                'games.id',
+                'games.name',
+                'games.cover_img',
+                'games.release_at',
+                'games.developer',
+                'games.publisher'
+            )
+            ->latest('games.created_at')
+            ->get();
+
+        $platforms = $user->platforms()
+            ->select(
+                'platforms.id',
+                'platforms.name',
+                'platforms.slug',
+                'platforms.logo'
+            )
+            ->latest('platforms.created_at')
+            ->get();
+
+        $postsCount = $user->posts()->count();
+
+        $posts = $user->posts()
+            ->with(['media:id,post_id,type,url,position'])
+            ->latest()
+            ->take(10)
+            ->get([
+                'id',
+                'content',
+                'created_at',
+                'updated_at',
+                'user_id',
+            ]);
 
         return response()->json([
             'user' => $user,
@@ -107,7 +139,7 @@ class UserController extends Controller
                 'following_count' => $followingCount,
                 'games_count' => $games->count(),
                 'platforms_count' => $platforms->count(),
-                'posts_count' => $posts->count(),
+                'posts_count' => $postsCount,
             ],
             'friends' => $friends,
             'followers' => $followers,
