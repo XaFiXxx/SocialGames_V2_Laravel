@@ -43,8 +43,8 @@ class MessageController extends Controller
                 File::makeDirectory($destinationPath, 0755, true);
             }
 
-            $manager = ImageManager::usingDriver(Driver::class);
-            $image = $manager->decodeSplFileInfo($request->file('image'));
+            $manager = new ImageManager(new Driver());
+            $image = $manager->read($request->file('image')->getRealPath());
 
             if ($image->width() > 1600) {
                 $image->scale(width: 1600);
@@ -53,7 +53,7 @@ class MessageController extends Controller
             $fileName = time() . '_' . uniqid() . '.webp';
             $fullPath = $destinationPath . DIRECTORY_SEPARATOR . $fileName;
 
-            $image->save($fullPath, quality: 85);
+            $image->toWebp(85)->save($fullPath);
 
             $imagePath = "storage/img/messages/{$conversation->id}/{$fileName}";
         }

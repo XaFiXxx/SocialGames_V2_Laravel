@@ -11,7 +11,7 @@ use Intervention\Image\Drivers\Gd\Driver;
 use Intervention\Image\ImageManager;
 use App\Models\User;
 use App\Models\Notification;
-use App\Events\NotificationSent; // ✅ AJOUT
+use App\Events\NotificationSent;
 
 class UserController extends Controller
 {
@@ -292,15 +292,15 @@ class UserController extends Controller
 
         File::cleanDirectory($destinationPath);
 
-        $manager = ImageManager::usingDriver(Driver::class);
-        $image = $manager->decodeSplFileInfo($request->file('avatar'));
+        $manager = new ImageManager(new Driver());
+        $image = $manager->read($request->file('avatar')->getRealPath());
 
         $image->cover(300, 300);
 
         $fileName = 'avatar.webp';
         $fullPath = $destinationPath . DIRECTORY_SEPARATOR . $fileName;
 
-        $image->save($fullPath, quality: 80);
+        $image->toWebp(80)->save($fullPath);
 
         $user->avatar_url = "storage/img/users/{$user->id}/avatar/{$fileName}";
         $user->save();
@@ -326,8 +326,8 @@ class UserController extends Controller
 
         File::cleanDirectory($destinationPath);
 
-        $manager = ImageManager::usingDriver(Driver::class);
-        $image = $manager->decodeSplFileInfo($request->file('cover'));
+        $manager = new ImageManager(new Driver());
+        $image = $manager->read($request->file('cover')->getRealPath());
 
         if ($image->width() > 1600) {
             $image->scale(width: 1600);
@@ -336,7 +336,7 @@ class UserController extends Controller
         $fileName = 'cover.webp';
         $fullPath = $destinationPath . DIRECTORY_SEPARATOR . $fileName;
 
-        $image->save($fullPath, quality: 85);
+        $image->toWebp(85)->save($fullPath);
 
         $user->cover_url = "storage/img/users/{$user->id}/cover/{$fileName}";
         $user->save();
