@@ -52,33 +52,13 @@ class Post extends Model
         return $this->hasMany(PostMedia::class);
     }
 
-    public function likes()
-    {
-        return $this->hasMany(PostLike::class);
-    }
-
     public function comments()
     {
         return $this->hasMany(PostComment::class);
     }
 
-    public function isLikedBy(User $user): bool
+    public function reactions()
     {
-        return $this->likes()->where('user_id', $user->id)->exists();
-    }
-
-    public function posts()
-    {
-        return $this->hasMany(Post::class);
-    }
-
-    public function postLikes()
-    {
-        return $this->hasMany(PostLike::class);
-    }
-
-    public function postComments()
-    {
-        return $this->hasMany(PostComment::class);
+        return $this->hasMany(PostReaction::class);
     }
 }

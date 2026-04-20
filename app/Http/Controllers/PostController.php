@@ -14,11 +14,42 @@ class PostController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $posts = Post::with(['user', 'media'])
+        $authUser = $request->user();
+
+        $posts = Post::with([
+                'user',
+                'media',
+                'reactions:id,post_id,user_id,type',
+            ])
             ->where('is_active', true)
             ->where('visibility', 'public')
             ->latest()
             ->paginate(10);
+
+        $posts->getCollection()->transform(function ($post) use ($authUser) {
+            $reactionCounts = $post->reactions
+                ->groupBy('type')
+                ->map(fn ($items) => $items->count());
+
+            $post->reactions_count = [
+                'like' => $reactionCounts->get('like', 0),
+                'fire' => $reactionCounts->get('fire', 0),
+                'gg' => $reactionCounts->get('gg', 0),
+                'total' => $post->reactions->count(),
+            ];
+
+            $post->user_reaction = $authUser
+                ? optional($post->reactions->firstWhere('user_id', $authUser->id))->type
+                : null;
+
+            $post->is_owner = $authUser
+                ? (int) $post->user_id === (int) $authUser->id
+                : false;
+
+            unset($post->reactions);
+
+            return $post;
+        });
 
         return response()->json($posts);
     }
@@ -39,7 +70,7 @@ class PostController extends Controller
         $hasContent = !empty(trim($validated['content'] ?? ''));
         $hasMedia = $request->hasFile('media');
 
-        if (!$hasContent && !$hasMedia) {
+        if (! $hasContent && ! $hasMedia) {
             return response()->json([
                 'message' => 'Le post doit contenir un texte ou au moins un média.'
             ], 422);
@@ -72,7 +103,7 @@ class PostController extends Controller
         if ($request->hasFile('media')) {
             $destinationPath = public_path("storage/img/posts/{$post->id}");
 
-            if (!File::exists($destinationPath)) {
+            if (! File::exists($destinationPath)) {
                 File::makeDirectory($destinationPath, 0755, true);
             }
 
@@ -111,9 +142,48 @@ class PostController extends Controller
             }
         }
 
+        $post->load(['user', 'media', 'reactions']);
+
+        $post->reactions_count = [
+            'like' => 0,
+            'fire' => 0,
+            'gg' => 0,
+            'total' => 0,
+        ];
+
+        $post->user_reaction = null;
+        $post->is_owner = true;
+
+        unset($post->reactions);
+
         return response()->json([
             'message' => 'Post créé avec succès',
-            'post' => $post->load(['user', 'media']),
+            'post' => $post,
         ], 201);
+    }
+
+    public function destroy(Request $request, int $postId): JsonResponse
+    {
+        $user = $request->user();
+
+        $post = Post::with('media')->findOrFail($postId);
+
+        if ((int) $post->user_id !== (int) $user->id) {
+            return response()->json([
+                'message' => 'Vous n’êtes pas autorisé à supprimer ce post.',
+            ], 403);
+        }
+
+        $postFolderPath = public_path("storage/img/posts/{$post->id}");
+
+        if (File::exists($postFolderPath)) {
+            File::deleteDirectory($postFolderPath);
+        }
+
+        $post->delete();
+
+        return response()->json([
+            'message' => 'Post supprimé avec succès.',
+        ]);
     }
 }

@@ -10,6 +10,7 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\PlatformController;
+use App\Http\Controllers\PostReactionController;
 
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminUserController;
@@ -120,4 +121,6 @@ Route::middleware(['auth:sanctum', 'verified.json'])->group(function () {
 
     // Publications
     Route::post('/posts', [PostController::class, 'store']);
+    Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+    Route::post('/posts/{post}/react', [PostReactionController::class, 'toggle']);
 });
