@@ -24,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'admin' => AdminMiddleware::class,
+            'verified.json' => \App\Http\Middleware\EnsureEmailIsVerifiedJson::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

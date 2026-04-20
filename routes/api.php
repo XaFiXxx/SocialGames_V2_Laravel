@@ -11,7 +11,6 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\PlatformController;
 
-
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminPostController;
@@ -19,13 +18,10 @@ use App\Http\Controllers\Admin\AdminGameController;
 use App\Http\Controllers\Admin\AdminPlatformController;
 use App\Http\Controllers\Admin\AdminGenreController;
 
-
-
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
-
     // USER
     Route::get('/user', [UserController::class, 'user']);
     Route::get('/profile', [UserController::class, 'me']);
@@ -34,25 +30,74 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/cover', [UserController::class, 'updateCover']);
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    // Routes des jeux 
+    // Routes des jeux
     Route::get('/games', [GameController::class, 'index']);
-    Route::post('/user/games', [GameController::class, 'store']);
-    Route::patch('/games/{game}', [GameController::class, 'update']);
-    Route::delete('/games/{game}', [GameController::class, 'destroy']);
 
     // Routes des plateformes
     Route::get('/platforms', [PlatformController::class, 'index']);
     Route::get('/platforms/{platform}', [PlatformController::class, 'show']);
-
-    Route::post('/user/platforms', [PlatformController::class, 'store']);
-    Route::patch('/user/platforms/{platform}', [PlatformController::class, 'update']);
-    Route::delete('/user/platforms/{platform}', [PlatformController::class, 'destroy']);
 
     // Barre de recherche
     Route::get('/search/users', [SearchController::class, 'searchUsers']);
 
     // PUBLIC PROFILE
     Route::get('/user/{id}', [UserController::class, 'show']);
+
+    // NOTIFICATIONS
+    Route::get('/notifications', [NotificationController::class, 'getNotifications']);
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAllNotifications']);
+    Route::post('/notifications/{id}/read', [NotificationController::class, 'readNotification']);
+    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
+
+    // Conversations
+    Route::get('/conversations', [ConversationController::class, 'index']);
+
+    // Messages
+    Route::get('/conversations/{id}/messages', [MessageController::class, 'getMessages']);
+
+    // Publications
+    Route::get('/posts', [PostController::class, 'index']);
+
+    // ADMIN
+    Route::middleware('admin')
+        ->prefix('admin')
+        ->group(function () {
+            Route::get('/stats', [AdminDashboardController::class, 'stats']);
+
+            Route::get('/users', [AdminUserController::class, 'index']);
+            Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
+            Route::patch('/users/{id}/toggle-admin', [AdminUserController::class, 'toggleAdmin']);
+
+            Route::get('/posts', [AdminPostController::class, 'index']);
+            Route::delete('/posts/{id}', [AdminPostController::class, 'destroy']);
+
+            Route::get('/games', [AdminGameController::class, 'index']);
+            Route::post('/games', [AdminGameController::class, 'store']);
+            Route::put('/games/{id}', [AdminGameController::class, 'update']);
+            Route::delete('/games/{id}', [AdminGameController::class, 'destroy']);
+
+            Route::get('/platforms', [AdminPlatformController::class, 'index']);
+            Route::post('/platforms', [AdminPlatformController::class, 'store']);
+            Route::put('/platforms/{id}', [AdminPlatformController::class, 'update']);
+            Route::delete('/platforms/{id}', [AdminPlatformController::class, 'destroy']);
+
+            Route::get('/genres', [AdminGenreController::class, 'index']);
+            Route::post('/genres', [AdminGenreController::class, 'store']);
+            Route::put('/genres/{id}', [AdminGenreController::class, 'update']);
+            Route::delete('/genres/{id}', [AdminGenreController::class, 'destroy']);
+        });
+});
+
+Route::middleware(['auth:sanctum', 'verified.json'])->group(function () {
+    // Routes des jeux
+    Route::post('/user/games', [GameController::class, 'store']);
+    Route::patch('/games/{game}', [GameController::class, 'update']);
+    Route::delete('/games/{game}', [GameController::class, 'destroy']);
+
+    // Routes des plateformes
+    Route::post('/user/platforms', [PlatformController::class, 'store']);
+    Route::patch('/user/platforms/{platform}', [PlatformController::class, 'update']);
+    Route::delete('/user/platforms/{platform}', [PlatformController::class, 'destroy']);
 
     // FOLLOW
     Route::post('/user/{id}/follow', [UserController::class, 'followUser']);
@@ -63,59 +108,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/{id}/friend-accept', [UserController::class, 'acceptFriendRequest']);
     Route::delete('/user/{id}/friendship', [UserController::class, 'removeFriendship']);
 
-    // NOTIFICATIONS
-    Route::get('/notifications', [NotificationController::class, 'getNotifications']);
-    Route::post('/notifications/read-all', [NotificationController::class, 'readAllNotifications']);
-    Route::post('/notifications/{id}/read', [NotificationController::class, 'readNotification']);
-    Route::delete('/notifications/{id}', [NotificationController::class, 'destroy']);
-
     // Conversations
-    Route::get('/conversations', [ConversationController::class, 'index']);
     Route::post('/conversations/direct', [ConversationController::class, 'createDirect']);
     Route::post('/conversations/group', [ConversationController::class, 'createGroup']);
 
     // Messages
-    Route::get('/conversations/{id}/messages', [MessageController::class, 'getMessages']);
     Route::post('/conversations/{id}/messages', [MessageController::class, 'sendMessage']);
     Route::post('/conversations/{conversationId}/read', [MessageController::class, 'markConversationAsRead']);
 
     // Publications
-    Route::get('/posts', [PostController::class, 'index']);
     Route::post('/posts', [PostController::class, 'store']);
-
-    // ADMIN
-    Route::middleware('admin')
-        ->prefix('admin')
-        ->group(function () {
-            // Routes des stats 
-            Route::get('/stats', [AdminDashboardController::class, 'stats']);
-
-            // Routes des users 
-            Route::get('/users', [AdminUserController::class, 'index']);
-            Route::delete('/users/{id}', [AdminUserController::class, 'destroy']);
-            Route::patch('/users/{id}/toggle-admin', [AdminUserController::class, 'toggleAdmin']);
-
-            // Routes des publications 
-            Route::get('/posts', [AdminPostController::class, 'index']);
-            Route::delete('/posts/{id}', [AdminPostController::class, 'destroy']);
-
-            // Routes des jeux vidéos 
-            Route::get('/games', [AdminGameController::class, 'index']);
-            Route::post('/games', [AdminGameController::class, 'store']);
-            Route::put('/games/{id}', [AdminGameController::class, 'update']);
-            Route::delete('/games/{id}', [AdminGameController::class, 'destroy']);
-
-            // Routes des Platforms 
-            Route::get('/platforms', [AdminPlatformController::class, 'index']);
-            Route::post('/platforms', [AdminPlatformController::class, 'store']);
-            Route::put('/platforms/{id}', [AdminPlatformController::class, 'update']);
-            Route::delete('/platforms/{id}', [AdminPlatformController::class, 'destroy']);
-
-            // Routes pour les genres 
-            Route::get('/genres', [AdminGenreController::class, 'index']);
-            Route::post('/genres', [AdminGenreController::class, 'store']);
-            Route::put('/genres/{id}', [AdminGenreController::class, 'update']);
-            Route::delete('/genres/{id}', [AdminGenreController::class, 'destroy']);
-
-        });
 });
