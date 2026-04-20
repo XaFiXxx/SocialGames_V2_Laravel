@@ -83,4 +83,23 @@ class AuthController extends Controller
             'message' => 'Déconnexion réussie',
         ]);
     }
+
+    public function resendVerificationEmail(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // ✅ Si déjà vérifié → on bloque
+        if ($user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Ton adresse email est déjà vérifiée.',
+            ], 400);
+        }
+
+        // 📧 Renvoi du mail
+        $user->sendEmailVerificationNotification();
+
+        return response()->json([
+            'message' => 'Email de vérification renvoyé avec succès.',
+        ]);
+    }
 }

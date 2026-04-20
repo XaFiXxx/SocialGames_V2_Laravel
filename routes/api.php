@@ -29,6 +29,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/avatar', [UserController::class, 'updateAvatar']);
     Route::post('/profile/cover', [UserController::class, 'updateCover']);
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::post('/email/verification-notification', [AuthController::class, 'resendVerificationEmail'])
+    ->middleware('throttle:2,1');
 
     // Routes des jeux
     Route::get('/games', [GameController::class, 'index']);
