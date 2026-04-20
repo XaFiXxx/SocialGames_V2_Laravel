@@ -9,6 +9,7 @@ use App\Http\Controllers\MessageController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\PlatformController;
 
 
 use App\Http\Controllers\Admin\AdminDashboardController;
@@ -38,6 +39,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/user/games', [GameController::class, 'store']);
     Route::patch('/games/{game}', [GameController::class, 'update']);
     Route::delete('/games/{game}', [GameController::class, 'destroy']);
+
+    // Routes des plateformes
+    Route::get('/platforms', [PlatformController::class, 'index']);
+    Route::get('/platforms/{platform}', [PlatformController::class, 'show']);
+
+    Route::post('/user/platforms', [PlatformController::class, 'store']);
+    Route::patch('/user/platforms/{platform}', [PlatformController::class, 'update']);
+    Route::delete('/user/platforms/{platform}', [PlatformController::class, 'destroy']);
 
     // Barre de recherche
     Route::get('/search/users', [SearchController::class, 'searchUsers']);
