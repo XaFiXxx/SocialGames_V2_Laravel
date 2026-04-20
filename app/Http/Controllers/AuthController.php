@@ -35,9 +35,14 @@ class AuthController extends Controller
             'newsletter' => $validated['newsletter'] ?? false,
         ]);
 
+        Auth::login($user);
+        $request->session()->regenerate();
+
+        $user->sendEmailVerificationNotification();
+
         return response()->json([
-            'message' => 'Inscription réussie',
-            'user' => $user,
+            'message' => 'Inscription réussie. Vérifie ton adresse email pour débloquer toutes les fonctionnalités.',
+            'user' => $request->user(),
         ], 201);
     }
 
