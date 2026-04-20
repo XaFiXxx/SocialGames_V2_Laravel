@@ -8,12 +8,16 @@ use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\MessageController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\PostController;
+use App\Http\Controllers\GameController;
+
+
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminUserController;
 use App\Http\Controllers\Admin\AdminPostController;
 use App\Http\Controllers\Admin\AdminGameController;
 use App\Http\Controllers\Admin\AdminPlatformController;
 use App\Http\Controllers\Admin\AdminGenreController;
+
 
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -28,6 +32,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/avatar', [UserController::class, 'updateAvatar']);
     Route::post('/profile/cover', [UserController::class, 'updateCover']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Routes des jeux 
+    Route::get('/games', [GameController::class, 'index']);
+    Route::post('/user/games', [GameController::class, 'store']);
+    Route::patch('/games/{game}', [GameController::class, 'update']);
+    Route::delete('/games/{game}', [GameController::class, 'destroy']);
 
     // Barre de recherche
     Route::get('/search/users', [SearchController::class, 'searchUsers']);
