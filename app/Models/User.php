@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\CustomVerifyEmail;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -44,6 +45,11 @@ class User extends Authenticatable implements MustVerifyEmail
             'terms_accepted_at' => 'datetime',
             'newsletter' => 'boolean',
         ];
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new CustomVerifyEmail());
     }
 
     // 🔹 GROUPS
