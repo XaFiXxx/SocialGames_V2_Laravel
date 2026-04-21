@@ -186,4 +186,27 @@ class PostController extends Controller
             'message' => 'Post supprimé avec succès.',
         ]);
     }
+
+    public static function formatPost($post, $authUser = null)
+    {
+        $reactionCounts = $post->reactions
+            ->groupBy('type')
+            ->map(fn ($items) => $items->count());
+
+        return [
+            ...$post->toArray(),
+            'reactions_count' => [
+                'like' => $reactionCounts->get('like', 0),
+                'fire' => $reactionCounts->get('fire', 0),
+                'gg' => $reactionCounts->get('gg', 0),
+                'total' => $post->reactions->count(),
+            ],
+            'user_reaction' => $authUser
+                ? optional($post->reactions->firstWhere('user_id', $authUser->id))->type
+                : null,
+            'is_owner' => $authUser
+                ? (int) $post->user_id === (int) $authUser->id
+                : false,
+        ];
+    }
 }

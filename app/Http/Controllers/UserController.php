@@ -12,6 +12,7 @@ use Intervention\Image\ImageManager;
 use App\Models\User;
 use App\Models\Notification;
 use App\Events\NotificationSent;
+use App\Http\Controllers\PostController;
 
 class UserController extends Controller
 {
@@ -119,7 +120,11 @@ class UserController extends Controller
         $postsCount = $user->posts()->count();
 
         $posts = $user->posts()
-            ->with(['media:id,post_id,type,url,position'])
+            ->with([
+                'user:id,username,name,surname,avatar_url',
+                'media:id,post_id,type,url,position',
+                'reactions:id,post_id,user_id,type',
+            ])
             ->latest()
             ->take(10)
             ->get([
@@ -128,7 +133,12 @@ class UserController extends Controller
                 'created_at',
                 'updated_at',
                 'user_id',
-            ]);
+                'visibility',
+                'group_id',
+                'team_id',
+            ])
+            ->map(fn ($post) => PostController::formatPost($post, $user))
+            ->values();
 
         return response()->json([
             'user' => $user,
@@ -273,7 +283,11 @@ class UserController extends Controller
         $postsCount = $profile->posts()->count();
 
         $posts = $profile->posts()
-            ->with(['media:id,post_id,type,url,position'])
+            ->with([
+                'user:id,username,name,surname,avatar_url',
+                'media:id,post_id,type,url,position',
+                'reactions:id,post_id,user_id,type',
+            ])
             ->latest()
             ->take(10)
             ->get([
@@ -282,7 +296,12 @@ class UserController extends Controller
                 'created_at',
                 'updated_at',
                 'user_id',
-            ]);
+                'visibility',
+                'group_id',
+                'team_id',
+            ])
+            ->map(fn ($post) => PostController::formatPost($post, $authUser))
+            ->values();
 
         return response()->json([
             'user' => $profile,
