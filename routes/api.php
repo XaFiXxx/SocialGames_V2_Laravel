@@ -20,9 +20,6 @@ use App\Http\Controllers\Admin\AdminGameController;
 use App\Http\Controllers\Admin\AdminPlatformController;
 use App\Http\Controllers\Admin\AdminGenreController;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-
 Route::middleware('auth:sanctum')->group(function () {
     // USER
     Route::get('/user', [UserController::class, 'user']);
