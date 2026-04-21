@@ -125,6 +125,7 @@ class UserController extends Controller
                 'media:id,post_id,type,url,position',
                 'reactions:id,post_id,user_id,type',
             ])
+            ->withCount('comments')
             ->latest()
             ->take(10)
             ->get([
@@ -288,6 +289,7 @@ class UserController extends Controller
                 'media:id,post_id,type,url,position',
                 'reactions:id,post_id,user_id,type',
             ])
+            ->withCount('comments')
             ->latest()
             ->take(10)
             ->get([

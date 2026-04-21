@@ -11,6 +11,7 @@ use App\Http\Controllers\PostController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\PlatformController;
 use App\Http\Controllers\PostReactionController;
+use App\Http\Controllers\PostCommentController;
 
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminUserController;
@@ -123,4 +124,7 @@ Route::middleware(['auth:sanctum', 'verified.json'])->group(function () {
     Route::post('/posts', [PostController::class, 'store']);
     Route::delete('/posts/{post}', [PostController::class, 'destroy']);
     Route::post('/posts/{post}/react', [PostReactionController::class, 'toggle']);
+    Route::get('/posts/{post}/comments', [PostCommentController::class, 'index']);
+    Route::post('/posts/{post}/comments', [PostCommentController::class, 'store']);
+    Route::delete('/comments/{comment}', [PostCommentController::class, 'destroy']);
 });

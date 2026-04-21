@@ -21,35 +21,15 @@ class PostController extends Controller
                 'media',
                 'reactions:id,post_id,user_id,type',
             ])
+            ->withCount('comments')
             ->where('is_active', true)
             ->where('visibility', 'public')
             ->latest()
             ->paginate(10);
 
-        $posts->getCollection()->transform(function ($post) use ($authUser) {
-            $reactionCounts = $post->reactions
-                ->groupBy('type')
-                ->map(fn ($items) => $items->count());
-
-            $post->reactions_count = [
-                'like' => $reactionCounts->get('like', 0),
-                'fire' => $reactionCounts->get('fire', 0),
-                'gg' => $reactionCounts->get('gg', 0),
-                'total' => $post->reactions->count(),
-            ];
-
-            $post->user_reaction = $authUser
-                ? optional($post->reactions->firstWhere('user_id', $authUser->id))->type
-                : null;
-
-            $post->is_owner = $authUser
-                ? (int) $post->user_id === (int) $authUser->id
-                : false;
-
-            unset($post->reactions);
-
-            return $post;
-        });
+        $posts->getCollection()->transform(
+            fn ($post) => self::formatPost($post, $authUser)
+        );
 
         return response()->json($posts);
     }
@@ -72,7 +52,7 @@ class PostController extends Controller
 
         if (! $hasContent && ! $hasMedia) {
             return response()->json([
-                'message' => 'Le post doit contenir un texte ou au moins un média.'
+                'message' => 'Le post doit contenir un texte ou au moins un média.',
             ], 422);
         }
 
@@ -87,7 +67,7 @@ class PostController extends Controller
 
             if ($videoCount > 1) {
                 return response()->json([
-                    'message' => 'Une seule vidéo est autorisée par post.'
+                    'message' => 'Une seule vidéo est autorisée par post.',
                 ], 422);
             }
         }
@@ -142,23 +122,17 @@ class PostController extends Controller
             }
         }
 
-        $post->load(['user', 'media', 'reactions']);
+        $post->load([
+            'user',
+            'media',
+            'reactions:id,post_id,user_id,type',
+        ]);
 
-        $post->reactions_count = [
-            'like' => 0,
-            'fire' => 0,
-            'gg' => 0,
-            'total' => 0,
-        ];
-
-        $post->user_reaction = null;
-        $post->is_owner = true;
-
-        unset($post->reactions);
+        $post->comments_count = 0;
 
         return response()->json([
             'message' => 'Post créé avec succès',
-            'post' => $post,
+            'post' => self::formatPost($post, $user),
         ], 201);
     }
 
@@ -187,20 +161,25 @@ class PostController extends Controller
         ]);
     }
 
-    public static function formatPost($post, $authUser = null)
+    public static function formatPost($post, $authUser = null): array
     {
         $reactionCounts = $post->reactions
             ->groupBy('type')
             ->map(fn ($items) => $items->count());
 
+        $data = $post->toArray();
+
+        unset($data['reactions']);
+
         return [
-            ...$post->toArray(),
+            ...$data,
             'reactions_count' => [
                 'like' => $reactionCounts->get('like', 0),
                 'fire' => $reactionCounts->get('fire', 0),
                 'gg' => $reactionCounts->get('gg', 0),
                 'total' => $post->reactions->count(),
             ],
+            'comments_count' => $post->comments_count ?? 0,
             'user_reaction' => $authUser
                 ? optional($post->reactions->firstWhere('user_id', $authUser->id))->type
                 : null,
